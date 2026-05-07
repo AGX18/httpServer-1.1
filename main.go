@@ -4,36 +4,44 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 )
 
 func main() {
-	fd, err := os.Open("messages.txt")
+	inputFilePath := "messages.txt"
+	f, err := os.Open(inputFilePath)
 	if err != nil {
-		fmt.Printf("couldn't read the file")
-		return
+		log.Fatalf("could not open %s: %s\n", inputFilePath, err)
 	}
-	buf := make([]byte, 8)
-	currLine := ""
-	for true {
-		n, err := fd.Read(buf)
+	defer f.Close()
+
+	fmt.Printf("Reading data from %s\n", inputFilePath)
+	fmt.Println("=====================================")
+
+	currentLineContents := ""
+	buffer := make([]byte, 8)
+	for {
+		n, err := f.Read(buffer)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				currLine += string(buf[:n])
-				fmt.Printf("read: %s", currLine)
-				return
+				currentLineContents += string(buffer[:n])
+				if currentLineContents != "" {
+					fmt.Printf("read: %s\n", currentLineContents)
+					currentLineContents = ""
+				}
+				break
 			}
-			fmt.Printf("error ocurred while reading the file: %v", err.Error())
-		} else {
-			currLine += string(buf[:n])
-			parts := strings.Split(currLine, "\n")
-			if len(parts) == 2 {
-				fmt.Printf("read: %s\n", parts[0])
-				currLine = parts[1]
-			} else {
-				currLine = parts[0]
-			}
+			fmt.Printf("error: %s\n", err.Error())
+			break
 		}
+		str := string(buffer[:n])
+		parts := strings.Split(str, "\n")
+		for i := 0; i < len(parts)-1; i++ {
+			fmt.Printf("read: %s%s\n", currentLineContents, parts[i])
+			currentLineContents = ""
+		}
+		currentLineContents += parts[len(parts)-1]
 	}
 }
